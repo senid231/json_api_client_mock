@@ -62,7 +62,7 @@ module JsonApiClientMock
 
     def find_test_results(method, path, params)
       types = path.split('/').last(2)
-      mocks = class_mocks(types.last).select { |mock| mock[:method] == method && mock[:id].nil? }
+      mocks = class_mocks(types.last).select { |mock| mock[:method] == method }
       mocks = class_mocks(types.first).select { |mock| mock[:method] == method && mock[:id].to_s == types.last } if mocks.blank? && types.length == 2
       mocks.detect { |mock| mock[:conditions] == params } || mocks.detect { |mock| mock[:conditions].blank? }
     end

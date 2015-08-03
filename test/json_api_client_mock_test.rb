@@ -9,7 +9,7 @@ class JsonApiClientMockTest < MiniTest::Unit::TestCase
 
   def test_get_index
     BarResource.set_test_results([{foo: 'bar', qwer: 'asdf'}])
-    pp results = BarResource.all
+    results = BarResource.all
 
     assert_equal(JsonApiClient::ResultSet, results.class)
     assert_equal(1, results.length)
@@ -22,7 +22,7 @@ class JsonApiClientMockTest < MiniTest::Unit::TestCase
 
   def test_get_show
     BarResource.set_test_results({id: 5, foo: 'bar', qwer: 'asdf'})
-    pp results = BarResource.find(5)
+    results = BarResource.find(5)
 
     assert_equal(JsonApiClient::ResultSet, results.class)
     assert_equal(1, results.length)
@@ -33,9 +33,28 @@ class JsonApiClientMockTest < MiniTest::Unit::TestCase
     assert_equal('asdf', first.qwer)
   end
 
+  def test_patch_update
+    BarResource.set_test_results({id: 5, foo: 'bar', qwer: 'asdf'})
+    BarResource.set_test_results({id: 5, foo: 'bar', qwer: '123'}, {}, {}, :patch)
+    result = BarResource.find(5).first
+    result.qwer = '123'
+
+    assert result.save
+    assert_equal('123', result.qwer)
+  end
+
+  def test_post_create
+    BarResource.set_test_results({id: 5, foo: 'bar', qwer: 'asdf'}, {}, {}, :post)
+    result = BarResource.create(foo: 'bar', qwer: 'asdf')
+
+    assert result.persisted?
+    assert_equal('bar', result.foo)
+    assert_equal('asdf', result.qwer)
+  end
+
   def test_get_index_nested
     CocktailResource.set_test_results([{bar_id: 2, foo: 'bar'}])
-    pp results = CocktailResource.where(bar_id: 2).all
+    results = CocktailResource.where(bar_id: 2).all
 
     assert_equal(JsonApiClient::ResultSet, results.class)
     assert_equal(1, results.length)
@@ -47,7 +66,7 @@ class JsonApiClientMockTest < MiniTest::Unit::TestCase
 
   def test_get_show_nested
     CocktailResource.set_test_results({id: 5, bar_id: 2, foo: 'bar'})
-    pp results = CocktailResource.where(bar_id: 2).find(5)
+    results = CocktailResource.where(bar_id: 2).find(5)
 
     assert_equal(JsonApiClient::ResultSet, results.class)
     assert_equal(1, results.length)
