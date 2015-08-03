@@ -8,8 +8,8 @@ module JsonApiClientMock
     end
 
     module ClassMethods
-      def set_test_results(results, conditions = nil, meta = {})
-        connection.set_test_results(self, results, conditions, meta)
+      def set_test_results(results, conditions = {}, meta = {})
+        connection.set_test_results(self, results, {conditions: conditions, meta: meta})
       end
 
       def clear_test_results

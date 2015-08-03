@@ -17,3 +17,7 @@ end
 
 class BarExtendedResource < BarResource
 end
+
+class CocktailResource < BaseResource
+  belongs_to :bar
+end

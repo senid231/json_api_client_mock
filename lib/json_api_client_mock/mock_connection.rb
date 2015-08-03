@@ -6,24 +6,48 @@ module JsonApiClientMock
     self.mocks = {}
 
     # ignored
-    def initialize(*attrs); end
-    def use(*attrs); end
-    def delete(*attrs); end
+    def initialize(*attrs)
+    end
 
-    def execute(query)
-      if results = find_test_results(query)
+    def use(*attrs)
+    end
+
+    def delete(*attrs)
+    end
+
+    def run(request_method, path, params = {}, headers = {})
+      if results = find_test_results(request_method, path, params)
         OpenStruct.new(:body => {
-          query.klass.table_name => results[:results],
-          "meta" => results[:meta]
-        })
+                           "data" => parse_resource(results[:results], path),
+                           "meta" => results[:meta]
+                       },
+                       env: {}
+        )
       else
-        raise MissingMock, missing_message(query)
+        raise MissingMock, missing_message(request_method, path, params)
       end
     end
 
-    def set_test_results(klass, results, conditions = nil, response_meta = {})
-      self.class.mocks[klass.name] ||= []
-      self.class.mocks[klass.name].unshift({results: results, conditions: conditions, meta: response_meta })
+    def parse_resource(results, type)
+      if results.is_a?(Hash)
+        {'id' => results[:id].to_s, 'type' => type, 'attributes' => results.except(:id)}
+      else
+        results.map do |result|
+          {'id' => result[:id].to_s, 'type' => type, 'attributes' => result.except(:id)}
+        end
+      end
+    end
+
+    def set_test_results(klass, results, options = {})
+      self.class.mocks[klass.table_name] ||= []
+      id = results[:id] if results.is_a?(Hash)
+      self.class.mocks[klass.table_name].unshift({
+                                                     results: results,
+                                                     conditions: options[:conditions],
+                                                     method: options[:method] || :get,
+                                                     id: id,
+                                                     meta: options[:meta]
+                                                 })
     end
 
     def clear_test_results
@@ -32,19 +56,21 @@ module JsonApiClientMock
 
     protected
 
-    def class_mocks(query)
-      self.class.mocks.fetch(query.klass.name, [])
+    def class_mocks(path)
+      self.class.mocks.fetch(path, [])
     end
 
-    def find_test_results(query)
-      class_mocks(query).detect { |mock| mock[:conditions] == query.params } ||
-        class_mocks(query).detect { |mock| mock[:conditions] && (mock[:conditions][:path] == query.path) } ||
-          class_mocks(query).detect { |mock| mock[:conditions].nil? }
+    def find_test_results(method, path, params)
+      types = path.split('/').last(2)
+      mocks = class_mocks(types.last).select { |mock| mock[:method] == method && mock[:id].nil? }
+      mocks = class_mocks(types.first).select { |mock| mock[:method] == method && mock[:id].to_s == types.last } if mocks.blank? && types.length == 2
+      mocks.detect { |mock| mock[:conditions] == params } || mocks.detect { |mock| mock[:conditions].blank? }
     end
 
-    def missing_message(query)
-      ["no test results set for #{query.klass.name} with conditions: #{query.params.pretty_inspect} or for request path #{query.path}",
-        "mocks conditions available: #{class_mocks(query).map { |m| m[:conditions] }.pretty_inspect}"].join("\n\n")
+    def missing_message(method, path, params)
+      ["no test results set for request_path #{path} with method #{method} and conditions: #{params.pretty_inspect}",
+       "mocks available: #{class_mocks(path).map { |m| m.pretty_inspect }}"
+      ].join("\n\n")
     end
   end
 end

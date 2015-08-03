@@ -7,6 +7,56 @@ class JsonApiClientMockTest < MiniTest::Unit::TestCase
     super
   end
 
+  def test_get_index
+    BarResource.set_test_results([{foo: 'bar', qwer: 'asdf'}])
+    pp results = BarResource.all
+
+    assert_equal(JsonApiClient::ResultSet, results.class)
+    assert_equal(1, results.length)
+
+    first = results.first
+    assert_equal(BarResource, first.class)
+    assert_equal('bar', first.foo)
+    assert_equal('asdf', first.qwer)
+  end
+
+  def test_get_show
+    BarResource.set_test_results({id: 5, foo: 'bar', qwer: 'asdf'})
+    pp results = BarResource.find(5)
+
+    assert_equal(JsonApiClient::ResultSet, results.class)
+    assert_equal(1, results.length)
+
+    first = results.first
+    assert_equal(BarResource, first.class)
+    assert_equal('bar', first.foo)
+    assert_equal('asdf', first.qwer)
+  end
+
+  def test_get_index_nested
+    CocktailResource.set_test_results([{bar_id: 2, foo: 'bar'}])
+    pp results = CocktailResource.where(bar_id: 2).all
+
+    assert_equal(JsonApiClient::ResultSet, results.class)
+    assert_equal(1, results.length)
+
+    first = results.first
+    assert_equal(CocktailResource, first.class)
+    assert_equal('bar', first.foo)
+  end
+
+  def test_get_show_nested
+    CocktailResource.set_test_results({id: 5, bar_id: 2, foo: 'bar'})
+    pp results = CocktailResource.where(bar_id: 2).find(5)
+
+    assert_equal(JsonApiClient::ResultSet, results.class)
+    assert_equal(1, results.length)
+
+    first = results.first
+    assert_equal(CocktailResource, first.class)
+    assert_equal('bar', first.foo)
+  end
+
   def test_conditionless_mocking
     BarResource.set_test_results([{foo: 'bar', qwer: 'asdf'}])
     results = BarResource.all
@@ -36,7 +86,7 @@ class JsonApiClientMockTest < MiniTest::Unit::TestCase
   end
 
   def test_conditional_mocking
-    BarResource.set_test_results([{foo: 'bar', qwer: 'asdf'}], {foo: 'bar'})
+    BarResource.set_test_results([{foo: 'bar', qwer: 'asdf'}], {filter: {foo: 'bar'}})
     assert_raises(JsonApiClientMock::MissingMock) do
       BarResource.all
     end
@@ -51,14 +101,14 @@ class JsonApiClientMockTest < MiniTest::Unit::TestCase
   end
 
   def test_meta_response
-    BarResource.set_test_results([{foo: 'bar', qwer: 'asdf'}], {foo: 'bar'}, {meta_attr: 1000})
+    BarResource.set_test_results([{foo: 'bar', qwer: 'asdf'}], {filter: {foo: 'bar'}}, {meta_attr: 1000})
     results = BarResource.where(foo: 'bar').all
 
     assert_equal(1000, results.meta[:meta_attr])
   end
 
   def test_by_conditional_request_path_mocking
-    BarResource.set_test_results([{foo: 'bar', qwer: 'asdf'}], {path: 'bar_resources/10'})
+    BarResource.set_test_results({id: 10, foo: 'bar', qwer: 'asdf'})
     assert_raises(JsonApiClientMock::MissingMock) do
       BarResource.all
     end
@@ -73,7 +123,7 @@ class JsonApiClientMockTest < MiniTest::Unit::TestCase
   end
 
   def test_conditional_mocking_param_order
-    BarResource.set_test_results([{foo: 'bar', qwer: 'asdf'}], {foo: 'bar', qwer: 'asdf'})
+    BarResource.set_test_results([{foo: 'bar', qwer: 'asdf'}], {filter: {foo: 'bar', qwer: 'asdf'}})
 
     results = BarResource.where(foo: 'bar', qwer: 'asdf').all
     assert_equal(1, results.length)
